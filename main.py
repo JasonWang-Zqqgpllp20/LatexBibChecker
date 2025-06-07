@@ -1,4 +1,6 @@
 import re
+import os
+import sys
 from typing import List
 
 from html_show import html_open
@@ -79,8 +81,13 @@ class BibParser:
         return entries
 
 if __name__ == "__main__":
-    entries = BibParser.parse_file("input.bib")
+    # input args
+    input_bib_file = "input.bib"
     
+    if not os.path.exists(input_bib_file):
+        print(f"Error: File '{input_bib_file}' does not exist.")
+        sys.exit()
+    
+    entries = BibParser.parse_file(input_bib_file)
     entries = check(entries=entries)
-    
     html_open(entries=entries)
