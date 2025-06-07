@@ -2,7 +2,7 @@ import webbrowser
 from pathlib import Path
 from typing import List
 
-from error_warning import IssueLevel, get_issue_legend
+from issue import IssueLevel, get_issue_legend
 
 def add_html_settings(content: str, entries: List) -> str:
     """生成一个简单的 HTML 文件，包含自定义内容"""
@@ -41,9 +41,9 @@ def control_html(entries: List) -> str:
     problems = set(issues)
     problems = [(p, get_issue_legend(p)) for p in problems]
     problem_str = [f'''
-        <label>
-            <input type="checkbox" class="type-filter" data-type="{value}" checked> {text}
-        </label>
+        <div>
+            <input type="checkbox" class="type-filter" data-type="{value}" checked> <b>[{text}]</b>
+        </div>
     ''' for value, text in problems]
     problems = "".join(problem_str)
     
@@ -53,12 +53,12 @@ def control_html(entries: List) -> str:
         <h3>Filtering Errors or Warnings</h3>
         
         <div class="filter-group">
-            <label>
-                <input type="checkbox" class="level-filter" data-level="error" checked> Errors
-            </label>
-            <label>
-                <input type="checkbox" class="level-filter" data-level="warning" checked> Warnings
-            </label>
+            <div>
+                <input type="checkbox" class="level-filter" data-level="error" checked> <font color="#FF0000" class="error">[Error]</font>
+            </div>
+            <div>
+                <input type="checkbox" class="level-filter" data-level="warning" checked> <font color="#F2A477" class="warning">[Warning]</font>
+            </div>
         </div>
         
         <h3>Filtering by Problems</h3>
@@ -126,9 +126,9 @@ def save_and_open_html(html_str: str, filename: str = "temp.html"):
 
 def issue_to_div(issue) -> str:
     if issue.issue_level == IssueLevel.WARNING:
-        prefix = '<font color="#F2A477" class="warning">[Warning] </font>'
+        prefix = f'<font color="#F2A477" class="warning">[Warning]</font> <b>[{issue.legend}]</b>'
     elif issue.issue_level == IssueLevel.ERROR:
-        prefix = '<font color="#FF0000" class="error">[Error] </font>'
+        prefix = f'<font color="#FF0000" class="error">[Error]</font> <b>[{issue.legend}]</b>'
     else:
         assert False
         

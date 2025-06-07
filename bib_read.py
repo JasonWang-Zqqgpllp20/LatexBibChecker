@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional
 
+
 class BibEntry:
     """Abstract base class for all BibTeX entry types."""
     
@@ -8,8 +9,8 @@ class BibEntry:
         self.citation_key = citation_key
         self.fields = fields
         # TODO: class of Error() or Warning()?
-        self.warnings: List[str] = []
-        self.errors: List[str] = []
+        self.warnings: List = []
+        self.errors: List = []
     
     def __str__(self) -> str:
         """Custom string representation of the entry."""
@@ -33,9 +34,11 @@ class BibEntry:
         return self.fields
     
     def add_warnings(self, warning):
+        assert warning.issue_level.code == 1
         self.warnings.append(warning)
     
     def add_errors(self, error):
+        assert error.issue_level.code == 2
         self.errors.append(error)
         
     def get_num_warnings(self):
@@ -46,6 +49,9 @@ class BibEntry:
     
     def get_pub(self):
         return None
+    
+    def get_pub_type(self):
+        return None
 
 class Article(BibEntry):
     """Class for @article entries."""
@@ -55,6 +61,9 @@ class Article(BibEntry):
         
     def get_pub(self) -> Optional[str]:
         return self.journal
+    
+    def get_pub_type(self) -> str:
+        return 'article'
     
     @property
     def author(self) -> Optional[str]:
@@ -92,6 +101,9 @@ class InProceedings(BibEntry):
         
     def get_pub(self) -> Optional[str]:
         return self.booktitle
+    
+    def get_pub_type(self) -> str:
+        return 'booktitle'
     
     @property
     def author(self) -> Optional[str]:

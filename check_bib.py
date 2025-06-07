@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 
 from bib_read import BibEntry, Article, InProceedings, Book, Others
 from html_show import search_paper
-from error_warning import Issue
+from issue import *
 
 # FUNCTION: 条目必须有：article有7个必须条目，inproceedings有5个必须条目
 def check_must_keys(entries: List[BibEntry]) -> List[BibEntry]:
@@ -14,7 +14,21 @@ def check_must_keys(entries: List[BibEntry]) -> List[BibEntry]:
     MUST_KEYS_CONFERENCE = MUST_KEYS + ['booktitle']
     SELECTED_KEYS = ['volume', 'number']
     
-    def find_redundant_keys(entry: BibEntry, must_fields: List[str]) -> Optional[str]:
+    
+    def find_not_included_keys(entry: BibEntry, must_fields: List[str], issue_level: IssueLevel) -> Optional[Issue]:
+        fields = entry.get_all_fields()
+        not_included_keys_l = []
+        for key in must_fields:
+            if key not in fields.keys():
+                not_included_keys_l.append(key)
+        
+        if len(not_included_keys_l) > 0:
+            issue = IssueNotIncludedKeys(entry=entry, issue_level=issue_level, not_included_keys=not_included_keys_l)
+        else:
+            issue = None
+        return issue
+    
+    def find_redundant_keys(entry: BibEntry, must_fields: List[str], issue_level: IssueLevel) -> Optional[str]:
         # TODO: similar codes
         fields = entry.get_all_fields()
         redundant_keys_l = []
@@ -23,65 +37,50 @@ def check_must_keys(entries: List[BibEntry]) -> List[BibEntry]:
                 redundant_keys_l.append(key)
         
         if len(redundant_keys_l) > 0:
-            error_msg = f"This {entry.entry_type} paper have redundant fields: {redundant_keys_l}"
+            issue = IssueRedundantKeys(entry=entry, issue_level=issue_level, redundant_keys=redundant_keys_l)
         else:
-            error_msg = None
-        return error_msg
-    
-    def find_not_included_keys(entry: BibEntry, must_fields: List[str]) -> Optional[str]:
-        fields = entry.get_all_fields()
-        not_included_keys_l = []
-        for key in must_fields:
-            if key not in fields.keys():
-                not_included_keys_l.append(key)
-        
-        if len(not_included_keys_l) > 0:
-            error_msg = f"This {entry.entry_type} paper does not have fields: {not_included_keys_l}"
-        else:
-            error_msg = None
-        return error_msg
+            issue = None
+        return issue
     
     for entry in entries:
         ''' not included keys '''
-        warning_msg, error_msg = None, None
+        warning, error = None, None
         if isinstance(entry, Article):
             if entry.journal is not None:
                 if 'arxiv' in entry.journal.lower():
-                    error_msg = find_not_included_keys(entry, MUST_KEYS_JOURNAL)
+                    error = find_not_included_keys(entry, MUST_KEYS_JOURNAL, issue_level=IssueLevel.ERROR)
                 else:
-                    warning_msg = find_not_included_keys(entry, SELECTED_KEYS)
-                    error_msg = find_not_included_keys(entry, MUST_KEYS_JOURNAL)
+                    warning = find_not_included_keys(entry, SELECTED_KEYS, issue_level=IssueLevel.WARNING)
+                    error = find_not_included_keys(entry, MUST_KEYS_JOURNAL, issue_level=IssueLevel.ERROR)
             else:
-                warning_msg = find_not_included_keys(entry, SELECTED_KEYS)
-                error_msg = find_not_included_keys(entry, MUST_KEYS_JOURNAL)
+                warning = find_not_included_keys(entry, SELECTED_KEYS, issue_level=IssueLevel.WARNING)
+                error = find_not_included_keys(entry, MUST_KEYS_JOURNAL, issue_level=IssueLevel.ERROR)
         elif isinstance(entry, InProceedings):
-            error_msg = find_not_included_keys(entry, MUST_KEYS_CONFERENCE)
+            error = find_not_included_keys(entry, MUST_KEYS_CONFERENCE, issue_level=IssueLevel.ERROR)
         elif isinstance(entry, Book):
             pass
         elif isinstance(entry, Others):
             pass
         
-        if warning_msg is not None:
-            entry.add_warnings(warning_msg)
-        if error_msg is not None:
-            entry.add_errors(error_msg)
+        if warning is not None:
+            entry.add_warnings(warning)
+        if error is not None:
+            entry.add_errors(error)
         
         ''' redundant keys '''
         # TODO: similar codes
-        warning_msg, error_msg = None, None
+        error = None
         if isinstance(entry, Article):
-            error_msg = find_redundant_keys(entry, MUST_KEYS_JOURNAL + SELECTED_KEYS)
+            error = find_redundant_keys(entry, MUST_KEYS_JOURNAL + SELECTED_KEYS, issue_level=IssueLevel.ERROR)
         elif isinstance(entry, InProceedings):
-            error_msg = find_redundant_keys(entry, MUST_KEYS_CONFERENCE + SELECTED_KEYS)
+            error = find_redundant_keys(entry, MUST_KEYS_CONFERENCE + SELECTED_KEYS, issue_level=IssueLevel.ERROR)
         elif isinstance(entry, Book):
             pass
         elif isinstance(entry, Others):
             pass
         
-        if warning_msg is not None:
-            entry.add_warnings(warning_msg)
-        if error_msg is not None:
-            entry.add_errors(error_msg)
+        if error is not None:
+            entry.add_errors(error)
     
     return entries
 
@@ -101,18 +100,18 @@ def check_redundant(entries: List[BibEntry]) -> List[BibEntry]:
     ''' Duplicate citation_key '''
     cit_key_l = [entry.citation_key for entry in entries]
     duplicate_cit_key_dict = find_duplicates(cit_key_l)
+    
+    for cit_key, v_indices in duplicate_cit_key_dict.items():
+        error_msg = IssueMultipleEntryKey(entry=None, issue_level=IssueLevel.ERROR, cit_key=cit_key)
+        for idx in v_indices:
+            entries[idx].add_errors(error_msg)
 
-    ''' Duplicate Titles '''
+    ''' Duplicate titles '''
     title_l = [entry.title.lower() for entry in entries]
     duplicate_title_dict = find_duplicates(title_l)
     
-    for cit_key, v_indices in duplicate_cit_key_dict.items():
-        error_msg = f"Multiple papers have the same citation keys '{cit_key}'"
-        for idx in v_indices:
-            entries[idx].add_errors(error_msg)
-            
     for title, v_indices in duplicate_title_dict.items():
-        error_msg = f"Multiple papers have the same title of '{title}'"
+        error_msg = IssueMultipleTitle(entry=None, issue_level=IssueLevel.ERROR, title=title)
         for idx in v_indices:
             entries[idx].add_errors(error_msg)
     
@@ -126,20 +125,20 @@ def check_pages(entries: List[BibEntry]) -> List[BibEntry]:
         # 1. standard begin-end page pair, like 1--10 or 1-10.
         range_match = re.fullmatch(r'(\d+)[-–—]{1,2}(\d+)', pages_str)
         if range_match:
-            start = int(range_match.group(1))
-            end = int(range_match.group(2))
-            if start <= end:
+            start_page = int(range_match.group(1))
+            end_page = int(range_match.group(2))
+            if start_page <= end_page:
                 return None
             else:
-                return f"The begin page '{start}' is bigger than the end page '{end}'."
+                return IssueBiggerBeginPage(entry=None, issue_level=IssueLevel.ERROR, start_page=start_page, end_page=end_page)
         
         # 2. single number
         if pages_str.isdigit():
             page_num = int(pages_str)
-            return f"The page number contain only a begin page '{page_num}' without a end page."
+            return IssueOnlyOnePage(entry=None, issue_level=IssueLevel.ERROR, page_num=page_num)
         
         # 3. Other formats
-        return f"Unrecognized page format: '{pages_str}', should be like '1--20'."
+        return IssueWrongPageFormat(entry=None, issue_level=IssueLevel.ERROR, pages_str=pages_str)
 
     pages_l = [entry.pages for entry in entries]
     for idx, pages_str in enumerate(pages_l):
@@ -153,6 +152,7 @@ def check_pages(entries: List[BibEntry]) -> List[BibEntry]:
 
 # FUNCTION: 年份只能有year这个字段有，article/booktitle就不要带年份了
 # FUNCTION: st, th是否要有？ # TODO: 感觉这个要全过一遍，看是否是统一了
+# TODO: more info like address 'Austria'
 def check_year(entries: List[BibEntry]) -> List[BibEntry]:
     """
     Check if publication names (journal/booktitle) contain year numbers or ordinal indicators.
@@ -181,39 +181,33 @@ def check_year(entries: List[BibEntry]) -> List[BibEntry]:
         if not pub:
             return None, None
         
-        warning_msg, error_msg = None, None
+        warning, error = None, None
         # Check for 4-digit years (1900-2099)
         year_match = re.search(r'(?<!\d)(19|20)\d{2}(?!\d)', pub)
         if year_match:
-            error_msg = f"Publication name at key '{pub_type}' contains year number '{year_match.group()}'. Year number should only appear in the 'year' field."
+            error = IssueTitleContainsYear(entry=None, issue_level=IssueLevel.ERROR, pub_type=pub_type, year_match=year_match)
             
         # Check for ordinal indicators (41st, 62nd, 3rd etc.)
         ordinal_match = re.search(r'\b\d{1,4}(st|nd|rd|th)\b', pub, re.IGNORECASE)
         if ordinal_match:
-            warning_msg = f"Publication name at key '{pub_type}' contains ordinal number '{ordinal_match.group()}'."
+            warning = IssueTitleContainsOrdinal(entry=None, issue_level=IssueLevel.WARNING, pub_type=pub_type, ordinal_match=ordinal_match)
             
-        return warning_msg, error_msg
+        return warning, error
 
     for entry in entries:
-        if isinstance(entry, Article):
-            pub = entry.journal
-            pub_type = "journal"
-        elif isinstance(entry, InProceedings):
-            pub = entry.booktitle
-            pub_type = "booktitle"
-        else:
-            continue
+        pub = entry.get_pub()
+        pub_type = entry.get_pub_type()
         
         if pub is None: # assume that the entry has a pub key but may have wrongs
             continue
         if 'arxiv' in pub.lower(): # the journal name of arxiv paper orginally contain year number
             continue
             
-        warning_msg, error_msg = analyze_year_in_pub(pub, pub_type)
-        if warning_msg is not None:
-            entry.add_warnings(warning_msg)
-        if error_msg is not None:
-            entry.add_errors(error_msg)
+        warning, error = analyze_year_in_pub(pub, pub_type)
+        if warning is not None:
+            entry.add_warnings(warning)
+        if error is not None:
+            entry.add_errors(error)
     
     return entries
 
@@ -228,14 +222,14 @@ def check_arxiv(entries: List[BibEntry]) -> List[BibEntry]:
                 msg = search_paper(entry.title)
                 # newly arxiv is ok to not be accepted in a journal/conf, old arxiv is not ok
                 if int(entry.year) < today_year - 1:
-                    entry.add_errors(msg)
+                    entry.add_errors(IssueArxivPaper(entry=None, issue_level=IssueLevel.ERROR, msg=msg))
                 else:
-                    entry.add_warnings(msg)
+                    entry.add_warnings(IssueArxivPaper(entry=None, issue_level=IssueLevel.WARNING, msg=msg))
             else: # assume that the entry has a year key
                 continue
         elif isinstance(entry, InProceedings):
             if 'arxiv' in entry.booktitle:
-                entry.add_errors(f"arxiv papers should use '@article', rather than '@inproceedings'")
+                entry.add_errors(IssueArxivWithInproceddings(entry=None, issue_level=IssueLevel.ERROR))
         else:
             assert False
         
@@ -325,7 +319,7 @@ def check_pub_captialization(entries: List[BibEntry]) -> List[BibEntry]:
         non_cap_words = find_improperly_capitalized_words(pub)
         if non_cap_words is not None:
             non_cap_words_str = ', '.join([word for word, _ in non_cap_words])
-            entry.add_warnings(f"The journal/conference name is not properly capitalized: {non_cap_words_str}")
+            entry.add_warnings(IssueTitleCapitalization(entry=None, issue_level=IssueLevel.WARNING, non_cap_words_str=non_cap_words_str))
 
     return entries
 
@@ -371,24 +365,23 @@ def check_pre_pf_conf(entries: List[BibEntry]) -> List[BibEntry]:
     # Compare the number of starts_with_proceedings and starts_with_advanced
     num_proceeding = sum(starts_with_proceedings_l)
     num_advanced = sum(starts_with_advanced_l)
-    compare_proceeding_advanced = num_proceeding > num_advanced
+    
     
     for entry, starts_with_proceedings, starts_with_advanced, in zip(entries, starts_with_proceedings_l, starts_with_advanced_l):
         if isinstance(entry, Article):
             if starts_with_proceedings or starts_with_advanced:
-                entry.add_errors(f"The journal begins with 'Proceedings of' or 'Advanced in', you may change '@article' to '@inproceddings' and change keys for this bib entry.")
+                entry.add_errors(IssueArticleWithProceddingsOf(entry=None, issue_level=IssueLevel.ERROR))
             else:
                 continue
         elif isinstance(entry, InProceedings):
-            if num_proceeding == 0 and num_advanced == 0:
+            if num_proceeding == 0 and num_advanced == 0: # ???
                 continue
-            elif compare_proceeding_advanced and starts_with_advanced: # proceeding > advanced
-                entry.add_warnings(f"The booktitle should start with 'Proceedings of' ({num_proceeding} papers start with 'Proceedings of' and {num_advanced} papers start with 'Advanced in'.)")
-            elif not compare_proceeding_advanced and starts_with_proceedings: # proceeding <= advanced
-                entry.add_warnings(f"The booktitle should start with 'Advanced in' ({num_advanced} papers start with 'Advanced in' and {num_proceeding} papers start with 'Proceedings of'.)")
-            elif not starts_with_proceedings and not starts_with_advanced:
-                # TODO: not sure.
-                entry.add_warnings(f"The booktitle of this conference paper should start with 'Proceedings of' or 'Advanced in'.")
+            if num_proceeding > num_advanced and starts_with_proceedings:
+                continue
+            if num_proceeding <= num_advanced and starts_with_advanced:
+                continue
+            
+            entry.add_warnings(IssueProceedingsOfAdvancedIn(entry=entry, issue_level=IssueLevel.WARNING, starts_with_proceedings=starts_with_proceedings, starts_with_advanced=starts_with_advanced, num_proceeding=num_proceeding, num_advanced=num_advanced))
                 
     return entries
     
@@ -409,7 +402,7 @@ def check_pub_abbreviation(entries: List[BibEntry]) -> List[BibEntry]:
         target_pattern = r'\b(?:[A-Z]{2,}|[A-Za-z]*[A-Z]{2,}[A-Za-z]*)\b'
         
         # 定义要排除的通用缩写（如ACM、IEEE等）
-        excluded_abbrs = {'ACM', 'IEEE', 'SIAM', 'MIT'} # TODO
+        excluded_abbrs = {'ACM', 'IEEE', 'SIAM'} # TODO
         
         # 找到所有匹配的缩写词
         all_abbrs = re.findall(target_pattern, pub)
@@ -428,7 +421,7 @@ def check_pub_abbreviation(entries: List[BibEntry]) -> List[BibEntry]:
             continue # assume the paper has a pub (journal/conf) key
         abbrs = detect_conference_abbreviations(pub)
         if abbrs is not None:
-            entry.add_warnings(f"The journal/conference of the paper contain abberiviations: {abbrs}") # TODO: not sure
+            entry.add_warnings(IssueAbbreviation(entry=entry, issue_level=IssueLevel.WARNING, abbrs=abbrs))
         
     return entries
 
@@ -443,22 +436,16 @@ def check(entries: List[BibEntry]):
     init_entries_len = len(entries)
     
     entries = check_must_keys(entries)
-
     entries = check_redundant(entries)
-    
     entries = check_pages(entries)
-    
     entries = check_year(entries)
-    
     entries = check_arxiv(entries)
-    
     entries = check_pub_captialization(entries)
-    
     entries = check_pre_pf_conf(entries)
-    
     entries = check_pub_abbreviation(entries)
     
-    assert entries is not None and init_entries_len == len(entries) # no entries are ignored or not returned
+    # no entries are ignored or not returned
+    assert entries is not None and init_entries_len == len(entries)
     
     return entries
 
