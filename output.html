@@ -1,0 +1,225 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Bib File Checker</title>
+        <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .content { background: #f6f6f6; padding: 15px; border-radius: 5px; }
+        </style>
+    </head>
+    
+    <!-- Filter -->
+    <div id="filter-panel">
+        <h3>Filtering Errors or Warnings</h3>
+        
+        <div class="filter-group">
+            <div>
+                <input type="checkbox" class="level-filter" data-level="error" checked> <font color=#FF0000 class="error">[Error]</font>
+            </div>
+            <div>
+                <input type="checkbox" class="level-filter" data-level="warning" checked> <font color=#FF7A48 class="warning">[Warning]</font>
+            </div>
+            <div>
+                <input type="checkbox" class="level-filter" data-level="notice" checked> <font color=#F2D0A7 class="notice">[Notice]</font>
+            </div>
+        </div>
+        
+        <h3>Filtering by Problems</h3>
+        <div class="filter-group">
+            
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueProceedingsOfAdvancesIn" checked> <b>[Inconsistency of "Proceedings of" and "Advances in"]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueAbbreviation" checked> <b>[Journal/Booktitle contains abbreviations]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueArxivPaper" checked> <b>[Arxiv papers]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueBiggerBeginPage" checked> <b>[Bigger begin page]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueTitleContainsOrdinal" checked> <b>[Title contains ordinal number]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueTitleCapitalization" checked> <b>[Title not capitalized]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueArticleWithProceddingsOf" checked> <b>[Acticle has "Proceedings of"]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueNotIncludedKeys" checked> <b>[Not included keys]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueOnlyOnePage" checked> <b>[Only one page]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueMultipleTitle" checked> <b>[Mulitple paper title]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueRedundantKeys" checked> <b>[Include redundant keys]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueMultipleEntryKey" checked> <b>[Mulitple entry key]</b>
+        </div>
+    
+        <div>
+            <input type="checkbox" class="type-filter" data-type="IssueTitleContainsYear" checked> <b>[Title contains year]</b>
+        </div>
+    
+        </div>
+    </div>
+
+    <script>
+    // 过滤功能实现
+    document.querySelectorAll('.level-filter, .type-filter').forEach(filter => {
+        filter.addEventListener('change', updateDisplay);
+    });
+
+    function updateDisplay() {
+        // 获取选中的过滤条件
+        const showErrors = document.querySelector('.level-filter[data-level="error"]').checked;
+        const showWarnings = document.querySelector('.level-filter[data-level="warning"]').checked;
+        const showNotices = document.querySelector('.level-filter[data-level="notice"]').checked;
+        const selectedTypes = new Set(
+            [...document.querySelectorAll('.type-filter:checked')].map(f => f.dataset.type)
+        );
+        
+        // 遍历所有问题
+        document.querySelectorAll('.issue').forEach(issueEl => {
+            const level = issueEl.dataset.level;
+            const type = issueEl.dataset.type;
+            
+            // 检查是否应该显示
+            const shouldShow = (
+                ((level === 'error' && showErrors) || 
+                (level === 'warning' && showWarnings) ||
+                (level === 'notice' && showNotices)) &&
+                selectedTypes.has(type)
+            );
+            
+            issueEl.style.display = shouldShow ? 'block' : 'none';
+        });
+        
+        // 新增：检查每个论文条目是否有可见的错误/警告
+        document.querySelectorAll('.bib-entry').forEach(entryDiv => {
+            // 查找该条目中所有可见的问题元素
+            const visibleIssues = entryDiv.querySelectorAll('.issue[style="display: block;"]');
+            
+            // 如果有至少一个可见的问题，显示整个条目；否则隐藏
+            if (visibleIssues.length > 0) {
+                entryDiv.style.display = 'block';
+            } else {
+                entryDiv.style.display = 'none';
+            }
+        });
+    }
+    updateDisplay();
+    </script>
+    
+    
+    <div class="bib-entry" data-entry-id="0">
+        <h1>Line 1</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=A+Study+on+Graph+Neural+Networks">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=A%20Study%20on%20Graph%20Neural%20Networks">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=A%20Study%20on%20Graph%20Neural%20Networks">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=A+Study+on+Graph+Neural+Networks">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=A%20Study%20on%20Graph%20Neural%20Networks&type=repositories">Github</a>.     
+        <div class="content">
+            @article{DuplicateKey,<br>&emsp;&emsp;title = {A Study on Graph Neural Networks},<br>&emsp;&emsp;author = {Alice Smith and Bob Lee},<br>&emsp;&emsp;journal = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition 2023},<br>&emsp;&emsp;year = {2020},<br>&emsp;&emsp;pages = {10-1},<br>}        <div class="issue notice" data-type="IssueNotIncludedKeys" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Not included keys]</b> This article paper does not have fields: volume, number.         </div>             <div class="issue error" data-type="IssueMultipleEntryKey" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Mulitple entry key]</b> Multiple papers have the same citation key 'DuplicateKey'.         </div>             <div class="issue error" data-type="IssueMultipleTitle" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Mulitple paper title]</b> Multiple papers have the same title 'a study on graph neural networks'.         </div>             <div class="issue error" data-type="IssueBiggerBeginPage" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Bigger begin page]</b> The begin page '10' is bigger than the end page '1'.         </div>             <div class="issue error" data-type="IssueTitleContainsYear" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Title contains year]</b> Publication name at key 'article' contains year number '2023'. Year number should only appear in the 'year' field.         </div>             <div class="issue error" data-type="IssueArticleWithProceddingsOf" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Acticle has "Proceedings of"]</b> The journal begins with 'Proceedings of' or 'Advances in', you may change '@article' to '@inproceddings' and change keys for this bib entry.         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="1">
+        <h1>Line 9</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=A+Study+on+Graph+Neural+Networks">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=A%20Study%20on%20Graph%20Neural%20Networks">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=A%20Study%20on%20Graph%20Neural%20Networks">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=A+Study+on+Graph+Neural+Networks">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=A%20Study%20on%20Graph%20Neural%20Networks&type=repositories">Github</a>.     
+        <div class="content">
+            @article{DuplicateKey,<br>&emsp;&emsp;title = {A Study on Graph Neural Networks},<br>&emsp;&emsp;author = {Alice Smith and Bob Lee},<br>&emsp;&emsp;journal = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition 2023},<br>&emsp;&emsp;year = {2020},<br>&emsp;&emsp;pages = {10--1},<br>}        <div class="issue notice" data-type="IssueNotIncludedKeys" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Not included keys]</b> This article paper does not have fields: volume, number.         </div>             <div class="issue error" data-type="IssueMultipleEntryKey" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Mulitple entry key]</b> Multiple papers have the same citation key 'DuplicateKey'.         </div>             <div class="issue error" data-type="IssueMultipleTitle" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Mulitple paper title]</b> Multiple papers have the same title 'a study on graph neural networks'.         </div>             <div class="issue error" data-type="IssueBiggerBeginPage" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Bigger begin page]</b> The begin page '10' is bigger than the end page '1'.         </div>             <div class="issue error" data-type="IssueTitleContainsYear" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Title contains year]</b> Publication name at key 'article' contains year number '2023'. Year number should only appear in the 'year' field.         </div>             <div class="issue error" data-type="IssueArticleWithProceddingsOf" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Acticle has "Proceedings of"]</b> The journal begins with 'Proceedings of' or 'Advances in', you may change '@article' to '@inproceddings' and change keys for this bib entry.         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="2">
+        <h1>Line 17</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=Missing+Journal+and+Pages">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=Missing%20Journal%20and%20Pages">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=Missing%20Journal%20and%20Pages">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=Missing+Journal+and+Pages">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=Missing%20Journal%20and%20Pages&type=repositories">Github</a>.     
+        <div class="content">
+            @article{MissingFields,<br>&emsp;&emsp;title = {Missing Journal and Pages},<br>&emsp;&emsp;author = {Charlie Zhang},<br>&emsp;&emsp;year = {2021},<br>}        <div class="issue notice" data-type="IssueNotIncludedKeys" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Not included keys]</b> This article paper does not have fields: volume, number.         </div>             <div class="issue error" data-type="IssueNotIncludedKeys" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Not included keys]</b> This article paper does not have fields: pages, journal.         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="3">
+        <h1>Line 23</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=Another+Paper+Title">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=Another%20Paper%20Title">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=Another%20Paper%20Title">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=Another+Paper+Title">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=Another%20Paper%20Title&type=repositories">Github</a>.     
+        <div class="content">
+            @inproceedings{BadInProc,<br>&emsp;&emsp;title = {Another Paper Title},<br>&emsp;&emsp;author = {David Chen},<br>&emsp;&emsp;year = {2019},<br>&emsp;&emsp;booktitle = {arXiv preprint arXiv:1905.00001},<br>&emsp;&emsp;pages = {1},<br>}        <div class="issue warning" data-type="IssueOnlyOnePage" data-level="warning">             <font color=#FF7A48 class="warning">[Warning]</font> <b>[Only one page]</b> The page number contain only a begin page '1' without an end page.         </div>             <div class="issue notice" data-type="IssueProceedingsOfAdvancesIn" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Inconsistency of "Proceedings of" and "Advances in"]</b> The booktitle of this conference paper should start with 'Proceedings of' or 'Advances in'.         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="4">
+        <h1>Line 31</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=An+Old+Arxiv+Paper">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=An%20Old%20Arxiv%20Paper">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=An%20Old%20Arxiv%20Paper">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=An+Old+Arxiv+Paper">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=An%20Old%20Arxiv%20Paper&type=repositories">Github</a>.     
+        <div class="content">
+            @article{ArxivOld,<br>&emsp;&emsp;title = {An Old Arxiv Paper},<br>&emsp;&emsp;author = {Eve Wang},<br>&emsp;&emsp;journal = {arXiv preprint arXiv:1801.00001},<br>&emsp;&emsp;year = {2020},<br>&emsp;&emsp;pages = {5--5},<br>}        <div class="issue warning" data-type="IssueArxivPaper" data-level="warning">             <font color=#FF7A48 class="warning">[Warning]</font> <b>[Arxiv papers]</b> Is this arxiv paper accepted by a journal/conference?         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="5">
+        <h1>Line 39</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=Great+Advances+in+ML">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=Great%20Advances%20in%20ML">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=Great%20Advances%20in%20ML">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=Great+Advances+in+ML">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=Great%20Advances%20in%20ML&type=repositories">Github</a>.     
+        <div class="content">
+            @article{YearInTitle,<br>&emsp;&emsp;title = {Great Advances in ML},<br>&emsp;&emsp;author = {Frank Liu},<br>&emsp;&emsp;journal = {Journal of Machine Learning 2021},<br>&emsp;&emsp;year = {2021},<br>&emsp;&emsp;pages = {33--44},<br>}        <div class="issue notice" data-type="IssueNotIncludedKeys" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Not included keys]</b> This article paper does not have fields: volume, number.         </div>             <div class="issue error" data-type="IssueTitleContainsYear" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Title contains year]</b> Publication name at key 'article' contains year number '2021'. Year number should only appear in the 'year' field.         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="6">
+        <h1>Line 47</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=Title+of+Paper">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=Title%20of%20Paper">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=Title%20of%20Paper">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=Title+of+Paper">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=Title%20of%20Paper&type=repositories">Github</a>.     
+        <div class="content">
+            @inproceedings{OrdinalIssue,<br>&emsp;&emsp;title = {Title of Paper},<br>&emsp;&emsp;author = {Grace Hu},<br>&emsp;&emsp;booktitle = {41st International Conference on Machine Learning},<br>&emsp;&emsp;year = {2022},<br>&emsp;&emsp;pages = {50--40},<br>}        <div class="issue error" data-type="IssueBiggerBeginPage" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Bigger begin page]</b> The begin page '50' is bigger than the end page '40'.         </div>             <div class="issue notice" data-type="IssueTitleContainsOrdinal" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Title contains ordinal number]</b> Publication name at key 'booktitle' contains ordinal number '41st'.         </div>             <div class="issue notice" data-type="IssueProceedingsOfAdvancesIn" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Inconsistency of "Proceedings of" and "Advances in"]</b> The booktitle of this conference paper should start with 'Proceedings of' or 'Advances in'.         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="7">
+        <h1>Line 55</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=lowercase+journal+name+test">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=lowercase%20journal%20name%20test">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=lowercase%20journal%20name%20test">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=lowercase+journal+name+test">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=lowercase%20journal%20name%20test&type=repositories">Github</a>.     
+        <div class="content">
+            @article{CapIssue,<br>&emsp;&emsp;title = {lowercase journal name test},<br>&emsp;&emsp;author = {Helen Zhao},<br>&emsp;&emsp;journal = {transactions on machine learning research},<br>&emsp;&emsp;year = {2023},<br>&emsp;&emsp;pages = {1--10},<br>}        <div class="issue notice" data-type="IssueNotIncludedKeys" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Not included keys]</b> This article paper does not have fields: volume, number.         </div>             <div class="issue notice" data-type="IssueTitleCapitalization" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Title not capitalized]</b> The journal/conference name is not correctly capitalized: transactions, machine, learning, research.         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="8">
+        <h1>Line 63</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=Abbreviation+Detection">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=Abbreviation%20Detection">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=Abbreviation%20Detection">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=Abbreviation+Detection">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=Abbreviation%20Detection&type=repositories">Github</a>.     
+        <div class="content">
+            @article{AbbrIssue,<br>&emsp;&emsp;title = {Abbreviation Detection},<br>&emsp;&emsp;author = {Ivy Kang},<br>&emsp;&emsp;journal = {ICML},<br>&emsp;&emsp;year = {2022},<br>&emsp;&emsp;pages = {100--110},<br>}        <div class="issue notice" data-type="IssueNotIncludedKeys" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Not included keys]</b> This article paper does not have fields: volume, number.         </div>             <div class="issue notice" data-type="IssueAbbreviation" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Journal/Booktitle contains abbreviations]</b> The journal/conference of the paper contain abberiviations: ['ICML'].         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="9">
+        <h1>Line 71</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=Redundant+Field+Paper">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=Redundant%20Field%20Paper">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=Redundant%20Field%20Paper">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=Redundant+Field+Paper">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=Redundant%20Field%20Paper&type=repositories">Github</a>.     
+        <div class="content">
+            @article{RedundantFields,<br>&emsp;&emsp;title = {Redundant Field Paper},<br>&emsp;&emsp;author = {Jake Lin},<br>&emsp;&emsp;journal = {Journal of AI Research},<br>&emsp;&emsp;volume = {10},<br>&emsp;&emsp;number = {2},<br>&emsp;&emsp;note = {Extra note},<br>&emsp;&emsp;url = {http://example.com},<br>&emsp;&emsp;year = {2022},<br>&emsp;&emsp;pages = {12--20},<br>}        <div class="issue error" data-type="IssueRedundantKeys" data-level="error">             <font color=#FF0000 class="error">[Error]</font> <b>[Include redundant keys]</b> This article paper have redundant fields: note, url.         </div>             <div class="issue notice" data-type="IssueAbbreviation" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Journal/Booktitle contains abbreviations]</b> The journal/conference of the paper contain abberiviations: ['AI'].         </div>     
+        </div>
+    </div>
+    
+    <div class="bib-entry" data-entry-id="10">
+        <h1>Line 83</h1>
+        Search this paper in         <a target="_blank" style="color:#88A3E2" href="https://scholar.google.com/scholar?q=Proceedings+Title+in+Article">Google Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://dblp.org/search?q=Proceedings%20Title%20in%20Article">DBLP</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.semanticscholar.org/search?q=Proceedings%20Title%20in%20Article">Semantic Scholar</a>,         <a target="_blank" style="color:#88A3E2" href="https://www.google.com/search?q=Proceedings+Title+in+Article">Google</a>,         <a target="_blank" style="color:#88A3E2" href="https://github.com/search?q=Proceedings%20Title%20in%20Article&type=repositories">Github</a>.     
+        <div class="content">
+            @article{AdvancedInArticle,<br>&emsp;&emsp;title = {Proceedings Title in Article},<br>&emsp;&emsp;author = {Liam Zhang},<br>&emsp;&emsp;journal = {Advanced in Neural Information Processing Systems},<br>&emsp;&emsp;year = {2023},<br>&emsp;&emsp;pages = {100--110},<br>}        <div class="issue notice" data-type="IssueNotIncludedKeys" data-level="notice">             <font color=#F2D0A7 class="notice">[Notice]</font> <b>[Not included keys]</b> This article paper does not have fields: volume, number.         </div>     
+        </div>
+    </div>
+    
+    </html>
+    
