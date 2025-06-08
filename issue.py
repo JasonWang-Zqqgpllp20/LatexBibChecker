@@ -4,6 +4,7 @@ from typing import List
 from bib_read import BibEntry
 
 class IssueLevel(Enum):
+    NOTICE = (0, 'NOTICE')
     WARNING = (1, 'WARNING')
     ERROR = (2, 'ERROR')
     
@@ -112,13 +113,12 @@ class IssueTitleContainsOrdinal(Issue):
         return f"Publication name at key '{self.pub_type}' contains ordinal number '{self.ordinal_match.group()}'."
     
 class IssueArxivPaper(Issue):
-    def __init__(self, entry: BibEntry, issue_level: IssueLevel, msg: str):
+    def __init__(self, entry: BibEntry, issue_level: IssueLevel):
         super().__init__(entry, issue_level)
-        self.msg = msg
     
     @property
     def message(self):
-        return self.msg
+        return "Is this arxiv paper accepted by a journal/conference?"
     
 class IssueArxivWithInproceddings(Issue):
     def __init__(self, entry: BibEntry, issue_level: IssueLevel):
@@ -143,26 +143,26 @@ class IssueArticleWithProceddingsOf(Issue):
     
     @property
     def message(self):
-        return f"The journal begins with 'Proceedings of' or 'Advanced in', you may change '@article' to '@inproceddings' and change keys for this bib entry."
+        return f"The journal begins with 'Proceedings of' or 'Advances in', you may change '@article' to '@inproceddings' and change keys for this bib entry."
 
-class IssueProceedingsOfAdvancedIn(Issue):
-    def __init__(self, entry: BibEntry, issue_level: IssueLevel, starts_with_proceedings: bool, starts_with_advanced: bool, num_proceeding: int, num_advanced: int):
+class IssueProceedingsOfAdvancesIn(Issue):
+    def __init__(self, entry: BibEntry, issue_level: IssueLevel, starts_with_proceedings: bool, starts_with_advances: bool, num_proceeding: int, num_advances: int):
         super().__init__(entry, issue_level)
-        self.compare_proceeding_advanced = num_proceeding > num_advanced
+        self.compare_proceeding_advances = num_proceeding > num_advances
         self.starts_with_proceedings = starts_with_proceedings
-        self.starts_with_advanced = starts_with_advanced
+        self.starts_with_advances = starts_with_advances
         self.num_proceeding = num_proceeding
-        self.num_advanced = num_advanced
+        self.num_advances = num_advances
     
     @property
     def message(self):
-        if self.compare_proceeding_advanced and self.starts_with_advanced: # proceeding > advanced
-            msg = f"The booktitle should start with 'Proceedings of' ({self.num_proceeding} papers start with 'Proceedings of' and {self.num_advanced} papers start with 'Advanced in'.)"
-        elif not self.compare_proceeding_advanced and self.starts_with_proceedings: # proceeding <= advanced
-            msg = f"The booktitle should start with 'Advanced in' ({self.num_advanced} papers start with 'Advanced in' and {self.num_proceeding} papers start with 'Proceedings of'.)"
-        elif not self.starts_with_proceedings and not self.starts_with_advanced:
+        if self.compare_proceeding_advances and self.starts_with_advances: # proceeding > advances
+            msg = f"The booktitle should start with 'Proceedings of' ({self.num_proceeding} papers start with 'Proceedings of' and {self.num_advances} papers start with 'Advances in')."
+        elif not self.compare_proceeding_advances and self.starts_with_proceedings: # proceeding <= advances
+            msg = f"The booktitle should start with 'Advances in' ({self.num_advances} papers start with 'Advances in' and {self.num_proceeding} papers start with 'Proceedings of')."
+        elif not self.starts_with_proceedings and not self.starts_with_advances:
             # TODO: not sure.
-            msg = f"The booktitle of this conference paper should start with 'Proceedings of' or 'Advanced in'."
+            msg = f"The booktitle of this conference paper should start with 'Proceedings of' or 'Advances in'."
         else:
             assert False
             
@@ -176,7 +176,7 @@ class IssueAbbreviation(Issue):
     @property
     def message(self):
         # TODO: not sure
-        return f"The journal/conference of the paper contain abberiviations: {self.abbrs}"
+        return f"The journal/conference of the paper contain abberiviations: {self.abbrs}."
 
 def get_issue_legend(issue_name: str):
     if issue_name == 'IssueNotIncludedKeys':
@@ -205,8 +205,8 @@ def get_issue_legend(issue_name: str):
         issue_legend = 'Title not capitalized'
     elif issue_name == 'IssueArticleWithProceddingsOf':
         issue_legend = 'Acticle has "Proceedings of"'
-    elif issue_name == 'IssueProceedingsOfAdvancedIn':
-        issue_legend = 'Inconsistency of "Proceedings of" and "Advanced in"'
+    elif issue_name == 'IssueProceedingsOfAdvancesIn':
+        issue_legend = 'Inconsistency of "Proceedings of" and "Advances in"'
     elif issue_name == 'IssueAbbreviation':
         issue_legend = 'Journal/Booktitle contains abbreviations'
     else:

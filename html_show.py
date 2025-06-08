@@ -1,8 +1,16 @@
 import webbrowser
 from pathlib import Path
 from typing import List
+from enum import Enum
 
 from issue import IssueLevel, get_issue_legend
+
+class Color(Enum):
+    BLOCK = '#f6f6f6'
+    NOTICE = '#F2D0A7'
+    WARNING = '#FF7A48'
+    ERROR = '#FF0000'
+    HYPERLINK = '#88A3E2'
 
 def add_html_settings(content: str, entries: List) -> str:
     """生成一个简单的 HTML 文件，包含自定义内容"""
@@ -15,7 +23,7 @@ def add_html_settings(content: str, entries: List) -> str:
         <title>Bib File Checker</title>
         <style>
             body {{ font-family: Arial, sans-serif; padding: 20px; }}
-            .content {{ background: #f0f0f0; padding: 15px; border-radius: 5px; }}
+            .content {{ background: {Color.BLOCK.value}; padding: 15px; border-radius: 5px; }}
         </style>
     </head>
     {control_html(entries)}
@@ -24,10 +32,11 @@ def add_html_settings(content: str, entries: List) -> str:
     """
     return html_template
 
-def warning_error_html_div(header: str, content: str, entry_id: int) -> str:
+def issue_html_div(header: str, entry_title: str, content: str, entry_id: int) -> str:
     html_content = f"""
     <div class="bib-entry" data-entry-id="{entry_id}">
         <h1>{header}</h1>
+        {search_paper(entry_title)}
         <div class="content">
             {content}
         </div>
@@ -36,8 +45,7 @@ def warning_error_html_div(header: str, content: str, entry_id: int) -> str:
     return html_content
 
 def control_html(entries: List) -> str:
-    issues = [warning.get_issue_type() for entry in entries for warning in entry.warnings] + \
-            [error.get_issue_type() for entry in entries for error in entry.errors]
+    issues = [issue.get_issue_type() for entry in entries for issue in entry.issues]
     problems = set(issues)
     problems = [(p, get_issue_legend(p)) for p in problems]
     problem_str = [f'''
@@ -54,10 +62,13 @@ def control_html(entries: List) -> str:
         
         <div class="filter-group">
             <div>
-                <input type="checkbox" class="level-filter" data-level="error" checked> <font color="#FF0000" class="error">[Error]</font>
+                <input type="checkbox" class="level-filter" data-level="error" checked> <font color={Color.ERROR.value} class="error">[Error]</font>
             </div>
             <div>
-                <input type="checkbox" class="level-filter" data-level="warning" checked> <font color="#F2A477" class="warning">[Warning]</font>
+                <input type="checkbox" class="level-filter" data-level="warning" checked> <font color={Color.WARNING.value} class="warning">[Warning]</font>
+            </div>
+            <div>
+                <input type="checkbox" class="level-filter" data-level="notice" checked> <font color={Color.NOTICE.value} class="notice">[Notice]</font>
             </div>
         </div>
         
@@ -77,6 +88,7 @@ def control_html(entries: List) -> str:
         // 获取选中的过滤条件
         const showErrors = document.querySelector('.level-filter[data-level="error"]').checked;
         const showWarnings = document.querySelector('.level-filter[data-level="warning"]').checked;
+        const showNotices = document.querySelector('.level-filter[data-level="notice"]').checked;
         const selectedTypes = new Set(
             [...document.querySelectorAll('.type-filter:checked')].map(f => f.dataset.type)
         );
@@ -89,7 +101,8 @@ def control_html(entries: List) -> str:
             // 检查是否应该显示
             const shouldShow = (
                 ((level === 'error' && showErrors) || 
-                (level === 'warning' && showWarnings)) &&
+                (level === 'warning' && showWarnings) ||
+                (level === 'notice' && showNotices)) &&
                 selectedTypes.has(type)
             );
             
@@ -115,20 +128,20 @@ def control_html(entries: List) -> str:
     
     return control_str
 
-def save_and_open_html(html_str: str, filename: str = "temp.html"):
+def save_and_open_html(html_str: str, filename: str):
     """保存 HTML 并自动用浏览器打开"""
-    # 保存文件
     file_path = Path(filename)
     file_path.write_text(html_str, encoding="utf-8")
     
-    # 用默认浏览器打开
     webbrowser.open(f"file://{file_path.absolute()}")
 
 def issue_to_div(issue) -> str:
-    if issue.issue_level == IssueLevel.WARNING:
-        prefix = f'<font color="#F2A477" class="warning">[Warning]</font> <b>[{issue.legend}]</b>'
+    if issue.issue_level == IssueLevel.NOTICE:
+        prefix = f'<font color={Color.NOTICE.value} class="notice">[Notice]</font> <b>[{issue.legend}]</b>'
+    elif issue.issue_level == IssueLevel.WARNING:
+        prefix = f'<font color={Color.WARNING.value} class="warning">[Warning]</font> <b>[{issue.legend}]</b>'
     elif issue.issue_level == IssueLevel.ERROR:
-        prefix = f'<font color="#FF0000" class="error">[Error]</font> <b>[{issue.legend}]</b>'
+        prefix = f'<font color={Color.ERROR.value} class="error">[Error]</font> <b>[{issue.legend}]</b>'
     else:
         assert False
         
@@ -138,43 +151,42 @@ def issue_to_div(issue) -> str:
         </div> \
     '''
     
-def warning_error_convert_html(entries) -> str:
+def issue_convert_html(entries) -> str:
     html_str = ""
     
     for i, entry in enumerate(entries):
-        if entry.get_num_errors() == 0 and entry.get_num_warnings() == 0:
+        if entry.get_num_issues() == 0:
             continue
         
         entry_str = str(entry)
-        for warning in entry.warnings:
-            entry_str += issue_to_div(warning)
-        for error in entry.errors:
-            entry_str += issue_to_div(error)
+        for issue in entry.issues:
+            entry_str += issue_to_div(issue)
         
         entry_str = entry_str.replace("\n", "<br>").replace("\t", "&emsp;&emsp;")
         
-        html_str += warning_error_html_div(f'Paper {i+1}', entry_str, i) # TODO: line number of the entry
+        entry_title = entry.title if entry.title is not None else ""
+        
+        html_str += issue_html_div(f'Line {entry.line_number}', entry_title, entry_str, i)
     
     return html_str
 
 def search_paper(paper_title: str) -> str:
-    search_html_str = f'''Is this arxiv paper accepted by a journal/conference? You may search in \
-        <a target="_blank" href="https://scholar.google.com/scholar?q={paper_title.replace(' ', '+')}">Google Scholar</a>, \
-        <a target="_blank" href="https://dblp.org/search?q={paper_title.replace(' ', '%20')}">DBLP</a>, \
-        <a target="_blank" href="https://www.semanticscholar.org/search?q={paper_title.replace(' ', '%20')}">Semantic Scholar</a>, \
-        <a target="_blank" href="https://www.google.com/search?q={paper_title.replace(' ', '+')}">Google</a>, \
-        <a target="_blank" href="https://github.com/search?q={paper_title.replace(' ', '%20')}&type=repositories">Github</a>. \
+    search_html_str = f'''Search this paper in \
+        <a target="_blank" style="color:{Color.HYPERLINK.value}" href="https://scholar.google.com/scholar?q={paper_title.replace(' ', '+')}">Google Scholar</a>, \
+        <a target="_blank" style="color:{Color.HYPERLINK.value}" href="https://dblp.org/search?q={paper_title.replace(' ', '%20')}">DBLP</a>, \
+        <a target="_blank" style="color:{Color.HYPERLINK.value}" href="https://www.semanticscholar.org/search?q={paper_title.replace(' ', '%20')}">Semantic Scholar</a>, \
+        <a target="_blank" style="color:{Color.HYPERLINK.value}" href="https://www.google.com/search?q={paper_title.replace(' ', '+')}">Google</a>, \
+        <a target="_blank" style="color:{Color.HYPERLINK.value}" href="https://github.com/search?q={paper_title.replace(' ', '%20')}&type=repositories">Github</a>. \
     '''
     
     return search_html_str
     
-def html_open(entries) -> None:
-    warning_error_html_str = warning_error_convert_html(entries)
+def html_open(entries, file_name) -> None:
+    warning_error_html_str = issue_convert_html(entries)
     html_content = add_html_settings(warning_error_html_str, entries)
-    save_and_open_html(html_content)
+    save_and_open_html(html_content, file_name)
 
 if __name__ == "__main__":
-    # 示例：把 Python 字符串变成 HTML 内容
     python_str = """
     <p>这是 Python 字符串生成的 HTML！</p>
     <ul>
@@ -184,7 +196,7 @@ if __name__ == "__main__":
     </ul>
     """
     
-    html_content = warning_error_html_div('Python-Generated HTML', python_str)
+    html_content = issue_html_div('Python-Generated HTML', python_str)
     html_content = html_content + html_content
     html_content = add_html_settings(html_content)
     save_and_open_html(html_content)

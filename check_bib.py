@@ -14,7 +14,6 @@ def check_must_keys(entries: List[BibEntry]) -> List[BibEntry]:
     MUST_KEYS_CONFERENCE = MUST_KEYS + ['booktitle']
     SELECTED_KEYS = ['volume', 'number']
     
-    
     def find_not_included_keys(entry: BibEntry, must_fields: List[str], issue_level: IssueLevel) -> Optional[Issue]:
         fields = entry.get_all_fields()
         not_included_keys_l = []
@@ -44,16 +43,16 @@ def check_must_keys(entries: List[BibEntry]) -> List[BibEntry]:
     
     for entry in entries:
         ''' not included keys '''
-        warning, error = None, None
+        notice, error = None, None
         if isinstance(entry, Article):
             if entry.journal is not None:
                 if 'arxiv' in entry.journal.lower():
                     error = find_not_included_keys(entry, MUST_KEYS_JOURNAL, issue_level=IssueLevel.ERROR)
                 else:
-                    warning = find_not_included_keys(entry, SELECTED_KEYS, issue_level=IssueLevel.WARNING)
+                    notice = find_not_included_keys(entry, SELECTED_KEYS, issue_level=IssueLevel.NOTICE)
                     error = find_not_included_keys(entry, MUST_KEYS_JOURNAL, issue_level=IssueLevel.ERROR)
             else:
-                warning = find_not_included_keys(entry, SELECTED_KEYS, issue_level=IssueLevel.WARNING)
+                notice = find_not_included_keys(entry, SELECTED_KEYS, issue_level=IssueLevel.NOTICE)
                 error = find_not_included_keys(entry, MUST_KEYS_JOURNAL, issue_level=IssueLevel.ERROR)
         elif isinstance(entry, InProceedings):
             error = find_not_included_keys(entry, MUST_KEYS_CONFERENCE, issue_level=IssueLevel.ERROR)
@@ -62,10 +61,10 @@ def check_must_keys(entries: List[BibEntry]) -> List[BibEntry]:
         elif isinstance(entry, Others):
             pass
         
-        if warning is not None:
-            entry.add_warnings(warning)
+        if notice is not None:
+            entry.add_issues(notice)
         if error is not None:
-            entry.add_errors(error)
+            entry.add_issues(error)
         
         ''' redundant keys '''
         # TODO: similar codes
@@ -80,7 +79,7 @@ def check_must_keys(entries: List[BibEntry]) -> List[BibEntry]:
             pass
         
         if error is not None:
-            entry.add_errors(error)
+            entry.add_issues(error)
     
     return entries
 
@@ -104,7 +103,7 @@ def check_redundant(entries: List[BibEntry]) -> List[BibEntry]:
     for cit_key, v_indices in duplicate_cit_key_dict.items():
         error_msg = IssueMultipleEntryKey(entry=None, issue_level=IssueLevel.ERROR, cit_key=cit_key)
         for idx in v_indices:
-            entries[idx].add_errors(error_msg)
+            entries[idx].add_issues(error_msg)
 
     ''' Duplicate titles '''
     title_l = [entry.title.lower() for entry in entries]
@@ -113,7 +112,7 @@ def check_redundant(entries: List[BibEntry]) -> List[BibEntry]:
     for title, v_indices in duplicate_title_dict.items():
         error_msg = IssueMultipleTitle(entry=None, issue_level=IssueLevel.ERROR, title=title)
         for idx in v_indices:
-            entries[idx].add_errors(error_msg)
+            entries[idx].add_issues(error_msg)
     
     return entries
     
@@ -135,7 +134,7 @@ def check_pages(entries: List[BibEntry]) -> List[BibEntry]:
         # 2. single number
         if pages_str.isdigit():
             page_num = int(pages_str)
-            return IssueOnlyOnePage(entry=None, issue_level=IssueLevel.ERROR, page_num=page_num)
+            return IssueOnlyOnePage(entry=None, issue_level=IssueLevel.WARNING, page_num=page_num)
         
         # 3. Other formats
         return IssueWrongPageFormat(entry=None, issue_level=IssueLevel.ERROR, pages_str=pages_str)
@@ -146,7 +145,7 @@ def check_pages(entries: List[BibEntry]) -> List[BibEntry]:
             continue
         error_msg = analyze_pages(pages_str)
         if error_msg is not None:
-            entries[idx].add_errors(error_msg)
+            entries[idx].add_issues(error_msg)
     
     return entries
 
@@ -181,7 +180,7 @@ def check_year(entries: List[BibEntry]) -> List[BibEntry]:
         if not pub:
             return None, None
         
-        warning, error = None, None
+        notice, error = None, None
         # Check for 4-digit years (1900-2099)
         year_match = re.search(r'(?<!\d)(19|20)\d{2}(?!\d)', pub)
         if year_match:
@@ -190,9 +189,9 @@ def check_year(entries: List[BibEntry]) -> List[BibEntry]:
         # Check for ordinal indicators (41st, 62nd, 3rd etc.)
         ordinal_match = re.search(r'\b\d{1,4}(st|nd|rd|th)\b', pub, re.IGNORECASE)
         if ordinal_match:
-            warning = IssueTitleContainsOrdinal(entry=None, issue_level=IssueLevel.WARNING, pub_type=pub_type, ordinal_match=ordinal_match)
+            notice = IssueTitleContainsOrdinal(entry=None, issue_level=IssueLevel.NOTICE, pub_type=pub_type, ordinal_match=ordinal_match)
             
-        return warning, error
+        return notice, error
 
     for entry in entries:
         pub = entry.get_pub()
@@ -203,11 +202,11 @@ def check_year(entries: List[BibEntry]) -> List[BibEntry]:
         if 'arxiv' in pub.lower(): # the journal name of arxiv paper orginally contain year number
             continue
             
-        warning, error = analyze_year_in_pub(pub, pub_type)
-        if warning is not None:
-            entry.add_warnings(warning)
+        notice, error = analyze_year_in_pub(pub, pub_type)
+        if notice is not None:
+            entry.add_issues(notice)
         if error is not None:
-            entry.add_errors(error)
+            entry.add_issues(error)
     
     return entries
 
@@ -219,17 +218,16 @@ def check_arxiv(entries: List[BibEntry]) -> List[BibEntry]:
         if isinstance(entry, Article):
             if entry.journal is not None and 'arxiv' in entry.journal.lower() and entry.year is not None:
                 # TODO: msg should not be html. html should be transfered latter.
-                msg = search_paper(entry.title)
                 # newly arxiv is ok to not be accepted in a journal/conf, old arxiv is not ok
                 if int(entry.year) < today_year - 1:
-                    entry.add_errors(IssueArxivPaper(entry=None, issue_level=IssueLevel.ERROR, msg=msg))
+                    entry.add_issues(IssueArxivPaper(entry=None, issue_level=IssueLevel.WARNING))
                 else:
-                    entry.add_warnings(IssueArxivPaper(entry=None, issue_level=IssueLevel.WARNING, msg=msg))
+                    entry.add_issues(IssueArxivPaper(entry=None, issue_level=IssueLevel.NOTICE))
             else: # assume that the entry has a year key
                 continue
         elif isinstance(entry, InProceedings):
             if 'arxiv' in entry.booktitle:
-                entry.add_errors(IssueArxivWithInproceddings(entry=None, issue_level=IssueLevel.ERROR))
+                entry.add_issues(IssueArxivWithInproceddings(entry=None, issue_level=IssueLevel.ERROR))
         else:
             assert False
         
@@ -264,7 +262,7 @@ def check_pub_captialization(entries: List[BibEntry]) -> List[BibEntry]:
             'for', 'from', 'in', 'into', 'of', 'on', 'onto', 'to', 'with', 'is',
             'are', 'was', 'were', 'am', 'be', 'been', 'being', 'have', 'has', 'had',
             'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'can', 'could',
-            'may', 'might', 'must', 'not',
+            'may', 'might', 'must', 'not', 'its',
             # permited words:
             'preprint'
         }
@@ -319,11 +317,11 @@ def check_pub_captialization(entries: List[BibEntry]) -> List[BibEntry]:
         non_cap_words = find_improperly_capitalized_words(pub)
         if non_cap_words is not None:
             non_cap_words_str = ', '.join([word for word, _ in non_cap_words])
-            entry.add_warnings(IssueTitleCapitalization(entry=None, issue_level=IssueLevel.WARNING, non_cap_words_str=non_cap_words_str))
+            entry.add_issues(IssueTitleCapitalization(entry=None, issue_level=IssueLevel.NOTICE, non_cap_words_str=non_cap_words_str))
 
     return entries
 
-# TODO: 会议以Proceedings of还是Advanced in。article里的journal里必须是期刊名(不能是Proceedings of或者Advanced in)，inproceedings里的booktitle必须是会议. 
+# FUNCTION: 会议以Proceedings of还是Advances in。article里的journal里必须是期刊名(不能是Proceedings of或者Advances in)，inproceedings里的booktitle必须是会议. 
 def check_pre_pf_conf(entries: List[BibEntry]) -> List[BibEntry]:
     def check_pub_title(title: str) -> dict:
         """
@@ -336,14 +334,14 @@ def check_pre_pf_conf(entries: List[BibEntry]) -> List[BibEntry]:
             包含检查结果的字典，例如：
             {
                 'starts_with_proceedings': bool,
-                'starts_with_advanced': bool,
+                'starts_with_advances': bool,
                 'is_valid': bool
             }
         """
         if not title:
             return {
                 'starts_with_proceedings': False,
-                'starts_with_advanced': False,
+                'starts_with_advances': False,
                 'is_valid': False
             }
         
@@ -351,41 +349,41 @@ def check_pre_pf_conf(entries: List[BibEntry]) -> List[BibEntry]:
         lower_title = title.strip().lower()
         
         starts_with_proceedings = lower_title.startswith('proceedings of')
-        starts_with_advanced = lower_title.startswith('advanced in')
+        starts_with_advances = lower_title.startswith('advances in')
         
         return {
             'starts_with_proceedings': starts_with_proceedings,
-            'starts_with_advanced': starts_with_advanced,
+            'starts_with_advances': starts_with_advances,
         }
     
     pub_info_l = [check_pub_title(entry.get_pub()) for entry in entries]
     starts_with_proceedings_l = [pub_info['starts_with_proceedings'] for pub_info in pub_info_l]
-    starts_with_advanced_l = [pub_info['starts_with_advanced'] for pub_info in pub_info_l]
+    starts_with_advances_l = [pub_info['starts_with_advances'] for pub_info in pub_info_l]
     
-    # Compare the number of starts_with_proceedings and starts_with_advanced
+    # Compare the number of starts_with_proceedings and starts_with_advances
     num_proceeding = sum(starts_with_proceedings_l)
-    num_advanced = sum(starts_with_advanced_l)
+    num_advances = sum(starts_with_advances_l)
     
     
-    for entry, starts_with_proceedings, starts_with_advanced, in zip(entries, starts_with_proceedings_l, starts_with_advanced_l):
+    for entry, starts_with_proceedings, starts_with_advances, in zip(entries, starts_with_proceedings_l, starts_with_advances_l):
         if isinstance(entry, Article):
-            if starts_with_proceedings or starts_with_advanced:
-                entry.add_errors(IssueArticleWithProceddingsOf(entry=None, issue_level=IssueLevel.ERROR))
+            if starts_with_proceedings or starts_with_advances:
+                entry.add_issues(IssueArticleWithProceddingsOf(entry=None, issue_level=IssueLevel.ERROR))
             else:
                 continue
         elif isinstance(entry, InProceedings):
-            if num_proceeding == 0 and num_advanced == 0: # ???
+            if num_proceeding == 0 and num_advances == 0: # ???
                 continue
-            if num_proceeding > num_advanced and starts_with_proceedings:
+            if num_proceeding > num_advances and starts_with_proceedings:
                 continue
-            if num_proceeding <= num_advanced and starts_with_advanced:
+            if num_proceeding <= num_advances and starts_with_advances:
                 continue
             
-            entry.add_warnings(IssueProceedingsOfAdvancedIn(entry=entry, issue_level=IssueLevel.WARNING, starts_with_proceedings=starts_with_proceedings, starts_with_advanced=starts_with_advanced, num_proceeding=num_proceeding, num_advanced=num_advanced))
+            entry.add_issues(IssueProceedingsOfAdvancesIn(entry=entry, issue_level=IssueLevel.NOTICE, starts_with_proceedings=starts_with_proceedings, starts_with_advances=starts_with_advances, num_proceeding=num_proceeding, num_advances=num_advances))
                 
     return entries
     
-# TODO: 会议名、期刊名是都缩写还是都全称
+# FUNCTION: 会议名、期刊名是都缩写还是都全称
 def check_pub_abbreviation(entries: List[BibEntry]) -> List[BibEntry]:
     def detect_conference_abbreviations(pub: str) -> Optional[List[str]]:
         """
@@ -421,7 +419,7 @@ def check_pub_abbreviation(entries: List[BibEntry]) -> List[BibEntry]:
             continue # assume the paper has a pub (journal/conf) key
         abbrs = detect_conference_abbreviations(pub)
         if abbrs is not None:
-            entry.add_warnings(IssueAbbreviation(entry=entry, issue_level=IssueLevel.WARNING, abbrs=abbrs))
+            entry.add_issues(IssueAbbreviation(entry=entry, issue_level=IssueLevel.NOTICE, abbrs=abbrs))
         
     return entries
 

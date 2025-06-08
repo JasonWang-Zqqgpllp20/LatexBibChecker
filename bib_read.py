@@ -4,13 +4,12 @@ from typing import Dict, List, Optional
 class BibEntry:
     """Abstract base class for all BibTeX entry types."""
     
-    def __init__(self, entry_type: str, citation_key: str, fields: Dict[str, str]):
+    def __init__(self, entry_type: str, citation_key: str, fields: Dict[str, str], line_number: int):
         self.entry_type = entry_type
         self.citation_key = citation_key
         self.fields = fields
-        # TODO: class of Error() or Warning()?
-        self.warnings: List = []
-        self.errors: List = []
+        self.line_number = line_number
+        self.issues: List = []
     
     def __str__(self) -> str:
         """Custom string representation of the entry."""
@@ -33,19 +32,12 @@ class BibEntry:
         """Get all fields as a dictionary."""
         return self.fields
     
-    def add_warnings(self, warning):
-        assert warning.issue_level.code == 1
-        self.warnings.append(warning)
-    
-    def add_errors(self, error):
-        assert error.issue_level.code == 2
-        self.errors.append(error)
+    def add_issues(self, issue):
+        assert issue.issue_level.code in [0, 1, 2]
+        self.issues.append(issue)
         
-    def get_num_warnings(self):
-        return len(self.warnings)
-    
-    def get_num_errors(self):
-        return len(self.errors)
+    def get_num_issues(self):
+        return len(self.issues)
     
     def get_pub(self):
         return None
@@ -56,8 +48,8 @@ class BibEntry:
 class Article(BibEntry):
     """Class for @article entries."""
     
-    def __init__(self, citation_key: str, fields: Dict[str, str]):
-        super().__init__("article", citation_key, fields)
+    def __init__(self, citation_key: str, fields: Dict[str, str], line_number: int):
+        super().__init__("article", citation_key, fields, line_number)
         
     def get_pub(self) -> Optional[str]:
         return self.journal
@@ -96,8 +88,8 @@ class Article(BibEntry):
 class InProceedings(BibEntry):
     """Class for @inproceedings entries."""
     
-    def __init__(self, citation_key: str, fields: Dict[str, str]):
-        super().__init__("inproceedings", citation_key, fields)
+    def __init__(self, citation_key: str, fields: Dict[str, str], line_number: int):
+        super().__init__("inproceedings", citation_key, fields, line_number)
         
     def get_pub(self) -> Optional[str]:
         return self.booktitle
@@ -128,8 +120,8 @@ class InProceedings(BibEntry):
 class Book(BibEntry):
     """Class for @book entries."""
     
-    def __init__(self, citation_key: str, fields: Dict[str, str]):
-        super().__init__("book", citation_key, fields)
+    def __init__(self, citation_key: str, fields: Dict[str, str], line_number: int):
+        super().__init__("book", citation_key, fields, line_number)
     
     @property
     def author(self) -> Optional[str]:
