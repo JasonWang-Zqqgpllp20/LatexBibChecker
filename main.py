@@ -1,6 +1,7 @@
 import re
 import os
 import sys
+import argparse
 from typing import List
 
 from html_show import html_open
@@ -88,14 +89,28 @@ class BibParser:
 
         return entries
 
-if __name__ == "__main__":
-    input_bib_file = "input.bib"
-    output_file = "output.html"
+def main():
+    parser = argparse.ArgumentParser(description="Validate and format a BibTeX file.")
+    parser.add_argument(
+        "--input", "-i",
+        default="input.bib",
+        help="Path to input .bib file (default: input.bib)"
+    )
+    parser.add_argument(
+        "--output", "-o",
+        default="output.html",
+        help="Path to output .html report (default: output.html)"
+    )
 
-    if not os.path.exists(input_bib_file):
-        print(f"Error: File '{input_bib_file}' does not exist.")
-        sys.exit()
+    args = parser.parse_args()
 
-    entries = BibParser.parse_file(input_bib_file)
+    if not os.path.exists(args.input):
+        print(f"Error: File '{args.input}' does not exist.")
+        sys.exit(1)
+
+    entries = BibParser.parse_file(args.input)
     entries = check(entries=entries)
-    html_open(entries=entries, file_name=output_file)
+    html_open(entries=entries, file_name=args.output)
+
+if __name__ == "__main__":
+    main()

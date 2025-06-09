@@ -2,7 +2,24 @@
 
 A comprehensive validation tool for LaTex .bib files that ensures academic references follow consistent formatting standards.
 
-## Features
+## 🚀 Usage
+
+### 🔧 Command-Line Interface
+
+You can run the validator from the command line using:
+
+```bash
+# Basic usage with default paths (input.bib and output.html)
+python main.py
+
+# Specify input and output files
+python main.py --input=references.bib --output=validation_report.html
+
+# Shorthand version
+python main.py -i refs.bib -o out.html
+```
+
+## ✨ Features
 
 ### 🔍 Structural Validation
 | Rule | Description | Severity |
@@ -44,7 +61,7 @@ A comprehensive validation tool for LaTex .bib files that ensures academic refer
 | Entry Types | Ensures valid entry types: `@article`, `@inproceedings`, partial support for `@book` | ERROR |
 
 
-### HTML Report
+## 🖼️ HTML Report
 ![HTML Report](./figs/example_report.jpg)
 
 ## 🧭 Coming Soon
@@ -62,8 +79,6 @@ We're actively working on expanding the capabilities of Bib File Checker. Here a
 
 4. **Advanced Error Detection**  
    Introduce support for additional error types and edge cases to further improve reference quality and formatting compliance.
-
-Stay tuned for frequent updates and feel free to suggest features or contribute via pull requests!
 
 
 ## ✅ Why Use This?
